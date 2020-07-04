@@ -31,3 +31,30 @@ public struct HTTPError: Error {
         case unknown // we have no idea what the problem is
     }
 }
+
+extension HTTPResult {
+    init(request: HTTPRequest, responseData: Data?, response: URLResponse?, error: Error?) {
+        var httpResponse: HTTPResponse?
+        if let r = response as? HTTPURLResponse {
+            httpResponse = HTTPResponse(request: request, response: r, body: responseData ?? Data())
+        }
+
+        if let e = error as? URLError {
+            let code: HTTPError.Code
+            switch e.code {
+                case .badURL: code = .invalidRequest
+                default: code = .unknown
+            }
+            self = .failure(HTTPError(code: code, request: request, response: httpResponse, underlyingError: e))
+        } else if let someError = error {
+            // an error, but not a URL error
+            self = .failure(HTTPError(code: .unknown, request: request, response: httpResponse, underlyingError: someError))
+        } else if let r = httpResponse {
+            // not an error, and an HTTPURLResponse
+            self = .success(r)
+        } else {
+            // not an error, but also not an HTTPURLResponse
+            self = .failure(HTTPError(code: .invalidResponse, request: request, response: nil, underlyingError: error))
+        }
+    }
+}
