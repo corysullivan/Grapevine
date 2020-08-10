@@ -34,4 +34,11 @@ public extension HTTPRequest {
     var url: URL? {
         urlComponents.url
     }
+
+    var parameters: [String: String] {
+        get { urlComponents.queryItems?.reduce(into: [String: String]()) { result, item in
+            result[item.name] = item.value
+        } ?? [:] }
+        set { urlComponents.queryItems = newValue.map { URLQueryItem(name: $0.key, value: $0.value) }}
+    }
 }

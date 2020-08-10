@@ -7,15 +7,21 @@
 import Foundation
 
 public protocol HTTPLoading {
-    func load(request: HTTPRequest, completion: @escaping (HTTPResult) -> Void)
+    func load(request: HTTPRequest, completion: @escaping (HTTPResult) -> Void) -> Cancelable?
 }
 
+public protocol Cancelable {
+    func cancel()
+}
+
+extension URLSessionDataTask: Cancelable {}
+
 extension URLSession: HTTPLoading {
-    public func load(request: HTTPRequest, completion: @escaping (HTTPResult) -> Void) {
+    public func load(request: HTTPRequest, completion: @escaping (HTTPResult) -> Void) -> Cancelable? {
         guard let url = request.url else {
             // we couldn't construct a proper URL out of the request's URLComponents
             completion(HTTPResult(request: request, responseData: nil, response: nil, error: nil))
-            return
+            return nil
         }
 
         // construct the URLRequest
@@ -39,7 +45,7 @@ extension URLSession: HTTPLoading {
             } catch {
                 // something went wrong creating the body; stop and report back
                 completion(HTTPResult(request: request, responseData: nil, response: nil, error: error))
-                return
+                return nil
             }
         }
 
@@ -49,5 +55,6 @@ extension URLSession: HTTPLoading {
             completion(result)
         }
         dataTask.resume()
+        return dataTask
     }
 }
